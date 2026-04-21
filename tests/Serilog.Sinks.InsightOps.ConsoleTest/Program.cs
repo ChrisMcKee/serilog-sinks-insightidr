@@ -26,7 +26,7 @@ namespace Serilog.Sinks.InsightOps.ConsoleTest
             {
                 //Token = Guid.Empty.ToString(),
                 Token = Guid.NewGuid().ToString(),
-                Region = "au", // au, eu, jp or us.,
+                Region = "eu", // au, eu, jp or us.,
                 UseSsl = false,
                 Debug = true,
                 DataHubAddress = "localhost",

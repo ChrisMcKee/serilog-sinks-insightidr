@@ -33,7 +33,7 @@ namespace Serilog.Sinks.InsightOps
             _asyncLogger.SetRegion(config.Region);
             _asyncLogger.SetUseSsl(config.UseSsl);
 
-            // These options are more or less, not used.
+            // These options are more or less not used.
             _asyncLogger.SetDebug(config.Debug);
             _asyncLogger.SetUseHostName(config.LogHostname);
             _asyncLogger.SetHostName(config.HostName);
@@ -88,8 +88,8 @@ namespace Serilog.Sinks.InsightOps
         /// <summary>
         /// The Token should be a GUID. The InsightOps AsyncLogger does a validation check but quietly
         /// displays an error message to TRACE (which is crap). This can lead to the client NEVER
-        /// logging .. and makes it hard to track down (why this client failed to log).
-        /// So - lets be proactive and error this hard, fast and early.
+        /// logging and makes it hard to track down (why this client failed to log).
+        /// So - let's be proactive and error this hard, fast, and early.
         /// </summary>
         /// <param name="token"></param>
         private static void ValidateToken(string token)

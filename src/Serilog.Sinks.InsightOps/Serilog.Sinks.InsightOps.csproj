@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
     <PackageId>Serilog.Sinks.InsightOps</PackageId>
     <Product>Serilog Sinks - Rapid7 InsightOps</Product>
     <Authors>Pure Krome</Authors>
@@ -10,7 +10,7 @@
     <Copyright>2019</Copyright>
     <Description>A Serilog sink that writes log events to Rapid 7's InsightOps (https://insight.rapid7.com/).</Description>
     <PackageProjectUrl>https://github.com/PureKrome/serilog-sinks-insightops</PackageProjectUrl>
-    <PackageTags>serilog logging rapid7 insightops world-domination unicorn magicalunicorn magical-unicorn</PackageTags>
+    <PackageTags>serilog logging rapid7 insightops</PackageTags>
     <RepositoryUrl>https://github.com/PureKrome/serilog-sinks-insightops</RepositoryUrl>
     <RepositoryType>c#</RepositoryType>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>
