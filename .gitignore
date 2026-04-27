@@ -41,3 +41,4 @@ App_Data/
 *.vs
 *.vscode
 .idea
+/benchmarks/

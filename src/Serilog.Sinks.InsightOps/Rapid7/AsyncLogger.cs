@@ -426,7 +426,11 @@ namespace Serilog.Sinks.InsightOps.Rapid7
 
         public void InterruptWorker()
         {
-            if (!_isRunning) return;
+            if (!_isRunning)
+            {
+                CloseConnection();
+                return;
+            }
 
             try
             {
@@ -435,6 +439,7 @@ namespace Serilog.Sinks.InsightOps.Rapid7
             }
             finally
             {
+                CloseConnection();
                 _threadCancellationTokenSource = new CancellationTokenSource();
                 _workerThread = new Thread(Run);
                 _isRunning = false;

@@ -100,15 +100,6 @@ namespace Serilog.Sinks.InsightOps.ConsoleTest
 
             try
             {
-                // Send HTTP 200 OK response once
-                string httpResponse = "HTTP/1.1 200 OK\r\n" +
-                                      "Content-Type: text/plain\r\n" +
-                                      "Content-Length: 2\r\n" +
-                                      "\r\n" +
-                                      "OK";
-                byte[] responseData = Encoding.UTF8.GetBytes(httpResponse);
-                stream.Write(responseData, 0, responseData.Length);
-
                 byte[] buffer = new byte[1024];
                 while (true)
                 {

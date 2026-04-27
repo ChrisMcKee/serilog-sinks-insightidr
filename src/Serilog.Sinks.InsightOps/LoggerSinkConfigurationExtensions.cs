@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
@@ -21,6 +22,7 @@ namespace Serilog.Sinks.InsightOps
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
         {
+            if (!Enum.IsDefined(typeof(LogEventLevel), restrictedToMinimumLevel)) throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
             var formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
 
             var sink = new InsightOpsSink(settings, formatter);

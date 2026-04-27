@@ -68,19 +68,13 @@ namespace Serilog.Sinks.InsightOps
                 return;
             }
 
-            var numWaits = 3;
-            while (!AsyncLogger.AreAllQueuesEmpty(TimeSpan.FromSeconds(2)) && 
-                numWaits > 0)
+            var flushed = _asyncLogger.FlushQueue(TimeSpan.FromSeconds(6));
+            if (!flushed)
             {
-                numWaits--;
-            }
-
-            if (numWaits <= 0)
-            {
-                // Hmm… the queue still had/has some items in it, and they probably won't be sent down the wire
-                // to Insight Ops ... :/
                 Console.WriteLine(" *** Failed to flush the Insight Ops queue 100%");
             }
+
+            _asyncLogger.InterruptWorker();
 
             GC.SuppressFinalize(this);
         }
