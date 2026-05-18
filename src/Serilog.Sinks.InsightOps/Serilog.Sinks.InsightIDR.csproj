@@ -7,12 +7,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>Serilog.Sinks.InsightIdr</PackageId>
     <Product>Serilog Sinks - Rapid7 IDR</Product>
-    <Authors>Chris; Pure Krome (World Domination Technologies)</Authors>
+    <Authors>Chris McKee; Pure Krome (World Domination Technologies)</Authors>
     <Copyright>2019-$([System.DateTime]::Now.Year)</Copyright>
     <Description>A Serilog sink that writes log events to Rapid 7's InsightOps https://docs.rapid7.com/insightidr/insightidr-overview/</Description>
-    <PackageProjectUrl>https://github.com/PureKrome/serilog-sinks-insightops</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/chrismckee/serilog-sinks-insightidr</PackageProjectUrl>
     <PackageTags>serilog logging rapid7 insightops</PackageTags>
-    <RepositoryUrl>https://github.com/PureKrome/serilog-sinks-insightops</RepositoryUrl>
+    <RepositoryUrl>https://github.com/chrismckee/serilog-sinks-insightidr</RepositoryUrl>
     <RepositoryType>c#</RepositoryType>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
