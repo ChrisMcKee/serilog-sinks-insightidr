@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using Serilog.Formatting.Compact;
+using Serilog.Sinks.InsightIDR;
 
 namespace Serilog.Sinks.InsightOps.ConsoleTest
 {
@@ -22,7 +23,7 @@ namespace Serilog.Sinks.InsightOps.ConsoleTest
             listenerThread.IsBackground = true;
             listenerThread.Start();
 
-            var settings = new InsightOpsSinkSettings
+            var settings = new InsightIdrSinkSettings()
             {
                 //Token = Guid.Empty.ToString(),
                 Token = Guid.NewGuid().ToString(),

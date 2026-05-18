@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Serilog.Sinks.InsightOps\Serilog.Sinks.InsightOps.csproj" />
+    <ProjectReference Include="..\..\src\Serilog.Sinks.InsightOps\Serilog.Sinks.InsightIDR.csproj" />
   </ItemGroup>
 
 </Project>

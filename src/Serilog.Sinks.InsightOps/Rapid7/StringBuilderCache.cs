@@ -2,27 +2,27 @@
 using System;
 using System.Text;
 
-namespace Serilog.Sinks.InsightOps.Rapid7
+namespace Serilog.Sinks.InsightIDR.Rapid7
 {
     internal static class StringBuilderCache
     {
         internal const int MaxBuilderSize = 65360;
 
         [ThreadStatic]
-        private static StringBuilder? _cachedInstance;
+        private static StringBuilder? CachedInstance;
 
         public static StringBuilder Acquire(int capacity = MaxBuilderSize)
         {
             if (capacity <= MaxBuilderSize)
             {
-                var sb = _cachedInstance;
+                var sb = CachedInstance;
                 if (sb != null)
                 {
                     // Avoid StringBuilder block fragmentation by getting a new StringBuilder
                     // when the requested size is larger than the current capacity
                     if (capacity <= sb.Capacity)
                     {
-                        _cachedInstance = null;
+                        CachedInstance = null;
                         sb.Clear();
                         return sb;
                     }
@@ -44,7 +44,7 @@ namespace Serilog.Sinks.InsightOps.Rapid7
         {
             if (sb?.Capacity <= MaxBuilderSize)
             {
-                _cachedInstance = sb;
+                CachedInstance = sb;
             }
         }
     }

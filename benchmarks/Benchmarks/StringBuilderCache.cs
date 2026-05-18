@@ -1,7 +1,6 @@
 using System;
 using System.Text;
 using BenchmarkDotNet.Attributes;
-using Serilog.Sinks.InsightOps.Rapid7;
 
 namespace Benchmark;
 

@@ -6,7 +6,7 @@ using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Formatting.Display;
 
-namespace Serilog.Sinks.InsightOps
+namespace Serilog.Sinks.InsightIDR
 {
     public static class LoggerSinkConfigurationExtensions
     {
@@ -14,18 +14,18 @@ namespace Serilog.Sinks.InsightOps
 
         public static LoggerConfiguration InsightOps(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings) => InsightOps(sinkConfiguration, settings, LevelAlias.Minimum, null);
+            InsightIdrSinkSettings settings) => InsightOps(sinkConfiguration, settings, LevelAlias.Minimum, null);
 
         public static LoggerConfiguration InsightOps(
             this LoggerSinkConfiguration sinkConfiguration, 
-            InsightOpsSinkSettings settings,
+            InsightIdrSinkSettings settings,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
         {
             if (!Enum.IsDefined(typeof(LogEventLevel), restrictedToMinimumLevel)) throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
             var formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
 
-            var sink = new InsightOpsSink(settings, formatter);
+            var sink = new InsightIdrSink(settings, formatter);
 
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
@@ -34,7 +34,7 @@ namespace Serilog.Sinks.InsightOps
         //       This is why this constructor doesn't offer an ITextFormatter AND an output template + IFormatProvider.
         public static LoggerConfiguration InsightOps(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings,
+            InsightIdrSinkSettings settings,
             ITextFormatter formatter = null, 
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
@@ -49,7 +49,7 @@ namespace Serilog.Sinks.InsightOps
 
         public static LoggerConfiguration InsightOps(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings,
+            InsightIdrSinkSettings settings,
             string outputTemplate = DefaultOutputTemplate,
             IFormatProvider formatProvider = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
@@ -67,12 +67,12 @@ namespace Serilog.Sinks.InsightOps
 
         private static LoggerConfiguration CreateSink(
             this LoggerSinkConfiguration sinkConfiguration, 
-            InsightOpsSinkSettings settings, 
+            InsightIdrSinkSettings settings, 
             ITextFormatter formatter,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
         {
-            var sink = new InsightOpsSink(settings, formatter);
+            var sink = new InsightIdrSink(settings, formatter);
 
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
@@ -111,7 +111,7 @@ namespace Serilog.Sinks.InsightOps
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
         {
-            var settings = new InsightOpsSinkSettings
+            var settings = new InsightIdrSinkSettings
             {
                 Token = token,
                 Region = region,

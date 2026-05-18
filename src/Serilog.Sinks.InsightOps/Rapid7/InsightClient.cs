@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Serilog.Sinks.InsightOps.Rapid7
+namespace Serilog.Sinks.InsightIDR.Rapid7
 {
     internal sealed class InsightTcpClient
     {
@@ -40,10 +40,8 @@ namespace Serilog.Sinks.InsightOps.Rapid7
 
         private static void SetSocketKeepAliveValues(TcpClient tcpClient, int keepAliveTime, int keepAliveInterval)
         {
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            if (OperatingSystem.IsWindows())
             {
-                ServicePointManager.SetTcpKeepAlive(true, keepAliveTime, keepAliveInterval);
-
                 const uint dummy = 0;
                 var inOptionValues = new byte[Marshal.SizeOf(dummy) * 3];
                 const bool onOff = true;

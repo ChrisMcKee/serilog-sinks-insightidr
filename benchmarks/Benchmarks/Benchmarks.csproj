@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net10.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Benchmark</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
@@ -11,11 +11,13 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageReference Include="Bogus" Version="35.6.5" />
-    <PackageReference Include="R7Insight.NLog" Version="3.0.0"/>
-    <PackageReference Include="WaffleGenerator.Bogus" Version="4.2.2"/>
+    <PackageReference Include="log4net" Version="3.3.1" />
+    <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.7.37220.1" />
+    <PackageReference Include="Serilog.Sinks.InsightOps" Version="3.1.0" />
+    <PackageReference Include="WaffleGenerator.Bogus" Version="4.2.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Serilog.Sinks.InsightOps\Serilog.Sinks.InsightOps.csproj"/>
+    <ProjectReference Include="..\..\src\Serilog.Sinks.InsightOps\Serilog.Sinks.InsightIDR.csproj" />
   </ItemGroup>
 </Project>

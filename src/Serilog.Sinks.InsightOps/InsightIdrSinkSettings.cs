@@ -1,8 +1,8 @@
-using Serilog.Sinks.InsightOps.Rapid7;
+using Serilog.Sinks.InsightIDR.Rapid7;
 
-namespace Serilog.Sinks.InsightOps
+namespace Serilog.Sinks.InsightIDR
 {
-    public class InsightOpsSinkSettings : IAsyncLoggerConfig
+    public class InsightIdrSinkSettings : IAsyncLoggerConfig
     {
         /// <summary>
         /// The unique token GUID of the log to send messages to. This applies when using the newer token-based logging.

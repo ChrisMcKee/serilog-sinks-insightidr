@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
-using System.Threading;
 using BenchmarkDotNet.Attributes;
-using Serilog.Sinks.InsightOps.Rapid7;
+using Serilog.Sinks.InsightIDR.Rapid7;
 using WaffleGenerator;
 
 namespace Benchmark;
@@ -20,7 +18,7 @@ public class AsyncClientBenchmark
     }
 
     readonly InsightCore.Net.AsyncLogger _classic;
-    readonly AsyncLogger _newAsyncLogger;
+    readonly Serilog.Sinks.InsightIDR.Rapid7.AsyncLogger _newAsyncLogger;
 
     public AsyncClientBenchmark()
     {
@@ -46,6 +44,6 @@ public class AsyncClientBenchmark
     [ArgumentsSource(nameof(Data))]
     public void TestLogNew(string log)
     {
-        _newAsyncLogger.QueueLogEvent(log);
+        _newAsyncLogger.QueueLogEvent([log]);
     }
 }

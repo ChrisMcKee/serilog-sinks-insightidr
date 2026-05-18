@@ -1,4 +1,4 @@
-﻿namespace Serilog.Sinks.InsightOps.Rapid7
+namespace Serilog.Sinks.InsightIDR.Rapid7
 {
     /// <summary>
     /// insightOps Asynchronous Logger configuration parameters

@@ -17,7 +17,10 @@ public static class FakeRapid7
         {
             while (true)
             {
+                Console.WriteLine("Waiting for a connection...");
                 var client = listener.AcceptTcpClient();
+                Console.WriteLine("Client connected!");
+
                 // Start handling the client in a separate thread
                 var clientThread = new Thread(() => HandleClient(client));
                 clientThread.Start();
@@ -32,30 +35,22 @@ public static class FakeRapid7
             listener.Stop();
         }
     }
-
-    private static void HandleClient(TcpClient client)
+    static void HandleClient(TcpClient client)
     {
         var stream = client.GetStream();
 
         try
         {
-            // Send HTTP 200 OK response once
-            const string httpResponse = "HTTP/1.1 200 OK\r\n" +
-                                        "Content-Type: text/plain\r\n" +
-                                        "Content-Length: 2\r\n" +
-                                        "\r\n" +
-                                        "OK";
-            var responseData = Encoding.UTF8.GetBytes(httpResponse);
-            stream.Write(responseData, 0, responseData.Length);
-
             var buffer = new byte[1024];
             while (true)
             {
                 var bytesRead = stream.Read(buffer, 0, buffer.Length);
                 if (bytesRead == 0)
                 {
+                    Console.WriteLine("Client disconnected.");
                     break;
                 }
+                Console.WriteLine("Received: " + Encoding.UTF8.GetString(buffer, 0, bytesRead));
             }
         }
         catch (Exception ex)

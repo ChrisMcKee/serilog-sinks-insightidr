@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Serilog.Debugging;
 
-namespace Serilog.Sinks.InsightOps.Rapid7
+namespace Serilog.Sinks.InsightIDR.Rapid7
 {
      public sealed class AsyncLogger
     {
@@ -412,17 +412,57 @@ namespace Serilog.Sinks.InsightOps.Rapid7
             WriteDebugMessages(string.Format(message, arg0));
         }
 
+        public void QueueLogEvent(Span<string> line)
+        {
+            QueueLogEntry(line, RecursionLimit);
+        }
+
         public void QueueLogEvent(string line)
         {
             QueueLogEntry(line, RecursionLimit);
         }
 
-#if !NETSTANDARD2_0
-        public void QueueLogEvent(Span<string> line)
+        private void QueueLogEntry(string line, int limit)
         {
-            QueueLogEntry(line, RecursionLimit);
+            while (true)
+            {
+                if (limit == 0)
+                {
+                    if (_debugEnabled) WriteDebugMessagesFormat("Message longer than {0}", RecursionLimit * LogLengthLimit);
+                    return;
+                }
+
+                if (_debugEnabled) WriteDebugMessagesFormat("Adding Line: {0}", line);
+                if (!_isRunning)
+                {
+                    // If in DataHub mode credentials are ignored.
+                    if (!_useDataHub && IsConfigured() || _useDataHub)
+                    {
+                        if (_debugEnabled) WriteDebugMessages("Starting Rapid7 Insight asynchronous socket client.");
+                        _workerThread.Name = "Rapid7InsightOpsLogAppender";
+                        _workerThread.IsBackground = true;
+                        _workerThread.Start();
+                        _isRunning = true;
+                    }
+                }
+
+                if (_debugEnabled) WriteDebugMessagesFormat("Queueing: {0}", line);
+
+                var chunkedEvent = line.TrimEnd(_trimChars);
+                if (chunkedEvent.Length > LogLengthLimit)
+                {
+                    AddChunkToQueue(chunkedEvent.Substring(0, LogLengthLimit));
+                    line = chunkedEvent.Substring(LogLengthLimit);
+                    limit -= 1;
+                    continue;
+                }
+
+                AddChunkToQueue(chunkedEvent);
+
+                break;
+            }
         }
-#endif
+
 
         public void InterruptWorker()
         {
@@ -466,7 +506,6 @@ namespace Serilog.Sinks.InsightOps.Rapid7
             return _queue.Count == 0;
         }
 
-#if !NETSTANDARD2_0
         private void QueueLogEntry(Span<string> line, int limit)
         {
             while (true)
@@ -500,48 +539,6 @@ namespace Serilog.Sinks.InsightOps.Rapid7
                 {
                     AddChunkToQueue(chunkedEvent[0..LogLengthLimit]);
                     line = chunkedEvent[LogLengthLimit..];
-                    limit -= 1;
-                    continue;
-                }
-
-                AddChunkToQueue(chunkedEvent);
-
-                break;
-            }
-        }
-#endif
-
-        private void QueueLogEntry(string line, int limit)
-        {
-            while (true)
-            {
-                if (limit == 0)
-                {
-                    if (_debugEnabled) WriteDebugMessagesFormat("Message longer than {0}", RecursionLimit * LogLengthLimit);
-                    return;
-                }
-
-                if (_debugEnabled) WriteDebugMessagesFormat("Adding Line: {0}", line);
-                if (!_isRunning)
-                {
-                    // If in DataHub mode credentials are ignored.
-                    if (!_useDataHub && IsConfigured() || _useDataHub)
-                    {
-                        if (_debugEnabled) WriteDebugMessages("Starting Rapid7 Insight asynchronous socket client.");
-                        _workerThread.Name = "Rapid7InsightOpsLogAppender";
-                        _workerThread.IsBackground = true;
-                        _workerThread.Start();
-                        _isRunning = true;
-                    }
-                }
-
-                if (_debugEnabled) WriteDebugMessagesFormat("Queueing: {0}", line);
-
-                var chunkedEvent = line.TrimEnd(_trimChars);
-                if (chunkedEvent.Length > LogLengthLimit)
-                {
-                    AddChunkToQueue(chunkedEvent.Substring(0, LogLengthLimit));
-                    line = chunkedEvent.Substring(LogLengthLimit);
                     limit -= 1;
                     continue;
                 }

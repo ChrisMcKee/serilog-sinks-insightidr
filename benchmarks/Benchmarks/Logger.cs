@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Threading;
-using Benchmark.Serilog_Sinks_InsightOps_3_1_0;
 using BenchmarkDotNet.Attributes;
 using Serilog;
 using Serilog.Sinks.InsightOps;
@@ -28,8 +25,9 @@ public class LoggerBenchmark
     {
         _classic = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.InsightOps_3_1_0(new InsightOpsSinkSettings_3_1_0
+            .WriteTo.InsightOps(new InsightOpsSinkSettings()
             {
+                Token = "00000000-0000-0000-0000-000000000000",
                 DataHubAddress = "localhost",
                 DataHubPort = Program.FakeLogPort,
                 IsUsingDataHub = true
@@ -41,6 +39,7 @@ public class LoggerBenchmark
             .MinimumLevel.Debug()
             .WriteTo.InsightOps(new InsightOpsSinkSettings
             {
+                Token = "00000000-0000-0000-0000-000000000000",
                 DataHubAddress = "localhost",
                 DataHubPort = Program.FakeLogPort,
                 IsUsingDataHub = true
