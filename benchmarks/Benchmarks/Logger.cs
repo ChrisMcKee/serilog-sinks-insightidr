@@ -12,6 +12,7 @@ namespace Benchmark;
 [Config(typeof(BenchmarkConfig))]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByParams)]
 [Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.Method)]
+[RankColumn]
 public class LoggerBenchmark
 {
     private static readonly string[] SharedData;
@@ -23,10 +24,10 @@ public class LoggerBenchmark
                                .ToArray();
     }
 
-    public IEnumerable<object[]> Data() => SharedData.Select(s => new object[] { s });
+    public static IEnumerable<object[]> Data() => SharedData.Select(s => new object[] { s });
 
-    readonly ILogger _classic;
-    readonly ILogger _newAsyncLogger;
+    private readonly ILogger _classic;
+    private readonly ILogger _newAsyncLogger;
 
     public LoggerBenchmark()
     {

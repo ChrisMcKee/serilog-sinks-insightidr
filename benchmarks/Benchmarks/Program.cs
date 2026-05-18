@@ -15,10 +15,9 @@ internal static class Program
         listenerThread.Start();
 
 #if !DEBUG
-        BenchmarkRunner.Run<AsyncClientBenchmark>();
         BenchmarkRunner.Run<LoggerBenchmark>();
 #else
-        BenchmarkRunner.Run<AsyncClientBenchmark>(new BenchmarkDotNet.Configs.DebugInProcessConfig());
+        BenchmarkRunner.Run<LoggerBenchmark>(new BenchmarkDotNet.Configs.DebugInProcessConfig());
 #endif
     }
 }
