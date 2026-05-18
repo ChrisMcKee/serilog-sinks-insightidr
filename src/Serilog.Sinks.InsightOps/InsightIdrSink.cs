@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Text;
 using Serilog.Core;
+using Serilog.Debugging;
 using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Sinks.InsightIDR.Rapid7;
@@ -9,6 +11,9 @@ namespace Serilog.Sinks.InsightIDR
 {
     public class InsightIdrSink : ILogEventSink, IDisposable
     {
+        [ThreadStatic]
+        private static StringWriter? _cachedWriter;
+
         private readonly AsyncLogger _asyncLogger;
         private readonly ITextFormatter _textFormatter;
 
@@ -51,10 +56,18 @@ namespace Serilog.Sinks.InsightIDR
             if (logEvent == null)
                 throw new ArgumentNullException(nameof(logEvent));
 
-            var stringWriter = new StringWriter();
+            var writer = GetWriter();
+            _textFormatter.Format(logEvent, writer);
+            _asyncLogger.QueueLogEvent(writer.GetStringBuilder().ToString());
+        }
 
-            _textFormatter.Format(logEvent, stringWriter);
-            _asyncLogger.QueueLogEvent(stringWriter.ToString());
+        private static StringWriter GetWriter()
+        {
+            var writer = _cachedWriter;
+            if (writer is null)
+                return _cachedWriter = new StringWriter(new StringBuilder(256));
+            writer.GetStringBuilder().Clear();
+            return writer;
         }
 
         /// <summary>
@@ -71,7 +84,7 @@ namespace Serilog.Sinks.InsightIDR
             var flushed = _asyncLogger.FlushQueue(TimeSpan.FromSeconds(6));
             if (!flushed)
             {
-                Console.WriteLine(" *** Failed to flush the Insight Ops queue 100%");
+                SelfLog.WriteLine("InsightIDR: failed to flush queue within timeout");
             }
 
             _asyncLogger.InterruptWorker();

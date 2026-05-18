@@ -38,7 +38,7 @@ namespace ConsoleTest
             // Create our logger.
             var log = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.InsightOps(settings)
+                .WriteTo.InsightIDR(settings)
                 //.WriteTo.InsightOps(settings, new RenderedCompactJsonFormatter())
                 .WriteTo.Console()
                 //.WriteTo.Console(new CompactJsonFormatter())

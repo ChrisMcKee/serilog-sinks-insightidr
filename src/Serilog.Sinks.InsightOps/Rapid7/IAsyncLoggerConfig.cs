@@ -3,7 +3,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
     /// <summary>
     /// insightOps Asynchronous Logger configuration parameters
     /// </summary>
-    public interface IAsyncLoggerConfig
+    internal interface IAsyncLoggerConfig
     {
         /// <summary>
         /// GUID for Token-based input (LOGENTRIES_TOKEN), recommended logging method

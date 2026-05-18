@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -41,11 +42,6 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
         // Newline char to trim from message for formatting.
         private static readonly char[] _trimChars = { '\r', '\n' };
 
-#if NETSTANDARD2_0
-        /** Non-Unix and Unix Newline */
-        private static readonly string[] _posixNewline = { "\r\n", "\n" };
-#endif
-
         /** Linux new-line */
         private const char NixNewLine = '\n';
 
@@ -59,8 +55,8 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
         // UTF-8 output character set.
         private static readonly UTF8Encoding _utf8 = new UTF8Encoding(false,true);
 
-        //static list of all the queues the log-appender might be managing.
-        private static readonly ConcurrentBag<BlockingCollection<string>> _allQueues = new ConcurrentBag<BlockingCollection<string>>();
+        // Tracks all active queues; ConcurrentDictionary used as a set so entries can be removed on dispose.
+        private static readonly ConcurrentDictionary<BlockingCollection<string>, byte> _allQueues = new();
 
         /// <summary>
         /// Determines if the queue is empty after waiting the specified waitTime.
@@ -75,21 +71,21 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
 
             while (start.Add(waitTime) > then)
             {
-                if (_allQueues.All(x => x.Count == 0))
+                if (_allQueues.Keys.All(x => x.Count == 0))
                     return true;
 
                 Thread.Sleep(100);
                 then = DateTime.UtcNow;
             }
 
-            return _allQueues.All(x => x.Count == 0);
+            return _allQueues.Keys.All(x => x.Count == 0);
         }
 
         public AsyncLogger()
         {
             _queue = new BlockingCollection<string>(QueueSize);
             _threadCancellationTokenSource = new CancellationTokenSource();
-            _allQueues.Add(_queue);
+            _allQueues.TryAdd(_queue, 0);
 
             _workerThread = new Thread(Run);
         }
@@ -168,105 +164,107 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
         private CancellationTokenSource _threadCancellationTokenSource;
         private readonly Random _random = new Random();
 
-        private InsightTcpClient _insightTcpClient;
-        private bool _isRunning;
+        private InsightTcpClient? _insightTcpClient;
+        private volatile bool _isRunning;
 
         private string _logMessagePrefix = string.Empty;
 
         private void Run()
         {
-            try
-            {
-                // Open connection.
-                ReopenConnection();
+            ReopenConnection();
 
-                if (_useHostName) ConfigureHostName();
-                if (_logId != string.Empty) _logMessagePrefix = _logId + " ";
-                if (_useHostName) _logMessagePrefix += _hostName;
-                var isPrefixEmpty = _logMessagePrefix == string.Empty;
+            if (_useHostName) ConfigureHostName();
+            if (_logId != string.Empty) _logMessagePrefix = _logId + " ";
+            if (_useHostName) _logMessagePrefix += _hostName;
+            var isPrefixEmpty = _logMessagePrefix == string.Empty;
 
-                // Flag that is set if logMessagePrefix is empty.
+            var cancellationToken = _threadCancellationTokenSource.Token;
 
-                var cancellationToken = _threadCancellationTokenSource.Token;
-
-                // Send data in queue.
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    ProcessQueueItem(isPrefixEmpty, cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (_debugEnabled) WriteDebugMessages("Asynchronous socket client was interrupted.", ex);
-            }
-        }
-
-        private void ProcessQueueItem(bool isPrefixEmpty, CancellationToken cancellationToken)
-        {
-            // added debug here
-            if (_debugEnabled) WriteDebugMessages("Await queue data");
-
-#if !NETSTANDARD2_0
-            var logLine = StringBuilderCache.Acquire();
-#else
-            var logLine = new StringBuilder();
-#endif
-            // Take data from queue.
-            var line = _queue.Take(cancellationToken);
-            if (_debugEnabled) WriteDebugMessages("Queue data obtained");
-
-            // Replace newline chars with line separator to format multi-line events nicely.
-#if NETSTANDARD2_0
-                    for (var index = 0; index < _posixNewline.Length; index++)
-                    {
-                        var newline = _posixNewline[index];
-                        line = line.Replace(newline, LineSeparator);
-                    }
-#else
-            line = line.ReplaceLineEndings(LineSeparator);
-#endif
-
-            // Don't append token to data-hub targeted messages
-            if (!_useDataHub) logLine.Append(_logToken);
-
-            // Add prefixes: LogID and HostName if they are defined.
-            if (!isPrefixEmpty) logLine.Append(_logMessagePrefix);
-
-            logLine.Append(line);
-            logLine.Append(NixNewLine);
-
-#if !NETSTANDARD2_0
-            var data = _utf8.GetBytes(StringBuilderCache.GetStringAndRelease(logLine));
-#else
-            var data = _utf8.GetBytes(logLine.ToString());
-#endif
-            // Process Buffer-Queue
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    if (_debugEnabled) WriteDebugMessages("Write data");
-#if NETSTANDARD2_0
-                    _insightTcpClient.Write(data, 0, data.Length);
-#else
-                    _insightTcpClient.Write(data);
-#endif
-
-                    if (_debugEnabled) WriteDebugMessages("Write complete");
+                    ProcessQueueItem(isPrefixEmpty, cancellationToken);
                 }
-                catch (IOException e)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    if (_debugEnabled) WriteDebugMessages("IOException during write, reopen: ", e);
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
-
-                    // Reopen the lost connection.
-                    ReopenConnection();
-                    continue;
+                    break;
                 }
-
-                break;
+                catch (Exception ex)
+                {
+                    if (_debugEnabled) WriteDebugMessages("Worker error, reopening connection.", ex);
+                    ReopenConnection();
+                }
             }
+
+            CloseConnection();
+        }
+
+        private void ProcessQueueItem(bool isPrefixEmpty, CancellationToken cancellationToken)
+        {
+            if (_debugEnabled) WriteDebugMessages("Await queue data");
+
+            var logLine = StringBuilderCache.Acquire();
+
+            var line = _queue.Take(cancellationToken);
+            if (_debugEnabled) WriteDebugMessages("Queue data obtained");
+
+            if (!_useDataHub) logLine.Append(_logToken);
+            if (!isPrefixEmpty) logLine.Append(_logMessagePrefix);
+
+            // Replace newlines inline — avoids the intermediate string that ReplaceLineEndings() would allocate.
+            AppendWithNewlineReplacement(logLine, line);
+            logLine.Append(NixNewLine);
+
+            var text = StringBuilderCache.GetStringAndRelease(logLine);
+            var byteCount = _utf8.GetByteCount(text);
+            var buffer = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                var written = _utf8.GetBytes(text, buffer);
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    try
+                    {
+                        if (_debugEnabled) WriteDebugMessages("Write data");
+                        _insightTcpClient!.Write(buffer.AsSpan(0, written));
+                        if (_debugEnabled) WriteDebugMessages("Write complete");
+                    }
+                    catch (IOException e)
+                    {
+                        if (_debugEnabled) WriteDebugMessages("IOException during write, reopen: ", e);
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
+                        ReopenConnection();
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        private static void AppendWithNewlineReplacement(StringBuilder sb, string source)
+        {
+            var span = source.AsSpan();
+            int start = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i] is '\r' or '\n')
+                {
+                    if (start < i) sb.Append(span[start..i]);
+                    sb.Append(LineSeparator);
+                    if (span[i] == '\r' && i + 1 < span.Length && span[i + 1] == '\n')
+                        i++;
+                    start = i + 1;
+                }
+            }
+            if (start < span.Length) sb.Append(span[start..]);
         }
 
         private void ConfigureHostName()
@@ -305,19 +303,16 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             }
         }
 
-        private void OpenConnection()
+        private void OpenConnection(CancellationToken cancellationToken)
         {
             try
             {
                 if (_insightTcpClient == null)
                 {
-                    // Create TCP Client instance providing all needed parameters. If DataHub-related properties
-                    // have not been overridden by log4net or NLog configurators, then DataHub is not used,
-                    // because m_UseDataHub == false by default.
                     _insightTcpClient = new InsightTcpClient(_useTls, _useDataHub, _dataHubAddr, _dataHubPort, _logRegion);
                 }
 
-                _insightTcpClient.Connect();
+                _insightTcpClient.Connect(cancellationToken);
             }
             catch (Exception ex)
             {
@@ -337,7 +332,11 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             {
                 try
                 {
-                    OpenConnection();
+                    OpenConnection(cancellationToken);
+                    return;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
                     return;
                 }
                 catch (Exception ex)
@@ -412,11 +411,6 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             WriteDebugMessages(string.Format(message, arg0));
         }
 
-        public void QueueLogEvent(Span<string> line)
-        {
-            QueueLogEntry(line, RecursionLimit);
-        }
-
         public void QueueLogEvent(string line)
         {
             QueueLogEntry(line, RecursionLimit);
@@ -479,6 +473,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             }
             finally
             {
+                _allQueues.TryRemove(_queue, out _);
                 CloseConnection();
                 _threadCancellationTokenSource = new CancellationTokenSource();
                 _workerThread = new Thread(Run);
@@ -504,60 +499,6 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
                     break;
             }
             return _queue.Count == 0;
-        }
-
-        private void QueueLogEntry(Span<string> line, int limit)
-        {
-            while (true)
-            {
-                if (limit == 0)
-                {
-                    if (_debugEnabled) WriteDebugMessagesFormat("Message longer than {0}", RecursionLimit * LogLengthLimit);
-                    return;
-                }
-
-                if (_debugEnabled) WriteDebugMessagesFormat("Adding Line: {0}", line.ToString());
-
-                if (!_isRunning)
-                {
-                    // If in DataHub mode credentials are ignored.
-                    if (!_useDataHub && IsConfigured() || _useDataHub)
-                    {
-                        if (_debugEnabled) WriteDebugMessages("Starting Rapid7 Insight asynchronous socket client.");
-                        _workerThread.Name = "Rapid7 Insight Log Appender";
-                        _workerThread.IsBackground = true;
-                        _workerThread.Start();
-                        _isRunning = true;
-                    }
-                }
-
-                if (_debugEnabled) WriteDebugMessagesFormat("Queueing: {0}", line.ToString());
-
-                var chunkedEvent = line.TrimEnd("\r").TrimEnd("\n");
-
-                if (chunkedEvent.Length > LogLengthLimit)
-                {
-                    AddChunkToQueue(chunkedEvent[0..LogLengthLimit]);
-                    line = chunkedEvent[LogLengthLimit..];
-                    limit -= 1;
-                    continue;
-                }
-
-                AddChunkToQueue(chunkedEvent);
-
-                break;
-            }
-        }
-
-        private void AddChunkToQueue(ReadOnlySpan<string> chunkedEvent)
-        {
-            // Try to append data to queue.
-            if (_queue.TryAdd(chunkedEvent.ToString())) return;
-
-            // If queue is full, remove the oldest message and try again.
-            WriteDebugMessages(QueueOverflowMessage);
-            _queue.Take();
-            _queue.TryAdd(chunkedEvent.ToString());
         }
 
         private void AddChunkToQueue(string chunkedEvent)

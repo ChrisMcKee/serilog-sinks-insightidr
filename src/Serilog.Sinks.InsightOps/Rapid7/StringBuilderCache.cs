@@ -1,5 +1,3 @@
-#if !NETSTANDARD2_0
-using System;
 using System.Text;
 
 namespace Serilog.Sinks.InsightIDR.Rapid7
@@ -49,5 +47,3 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
         }
     }
 }
-
-#endif

@@ -1,21 +1,28 @@
 using System.Collections.Generic;
+using System.Linq;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using Serilog.Sinks.InsightIDR.Rapid7;
 using WaffleGenerator;
 
 namespace Benchmark;
 
 [Config(typeof(BenchmarkConfig))]
+[GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByParams)]
+[Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.Method)]
 public class AsyncClientBenchmark
 {
-    public IEnumerable<object[]> Data()
+    // Generated once so TestLog and TestLogNew receive identical strings.
+    private static readonly string[] SharedData;
+
+    static AsyncClientBenchmark()
     {
-        for (int i = 0; i < 3; i++)
-        {
-            var text = WaffleEngine.Text(paragraphs: 1, includeHeading: false);
-            yield return [text];
-        }
+        SharedData = Enumerable.Range(0, 3)
+            .Select(_ => WaffleEngine.Text(paragraphs: 1, includeHeading: false))
+            .ToArray();
     }
+
+    public IEnumerable<object[]> Data() => SharedData.Select(s => new object[] { s });
 
     readonly InsightCore.Net.AsyncLogger _classic;
     readonly Serilog.Sinks.InsightIDR.Rapid7.AsyncLogger _newAsyncLogger;
@@ -44,6 +51,6 @@ public class AsyncClientBenchmark
     [ArgumentsSource(nameof(Data))]
     public void TestLogNew(string log)
     {
-        _newAsyncLogger.QueueLogEvent([log]);
+        _newAsyncLogger.QueueLogEvent(log);
     }
 }

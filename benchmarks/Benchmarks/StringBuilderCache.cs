@@ -1,10 +1,10 @@
 using System;
 using System.Text;
 using BenchmarkDotNet.Attributes;
+using Serilog.Sinks.InsightIDR.Rapid7;
 
 namespace Benchmark;
 
-#if NET8_0
 [MemoryDiagnoser]
 public class StringBuilderBenchmark
 {
@@ -37,4 +37,3 @@ public class StringBuilderBenchmark
         return StringBuilderCache.GetStringAndRelease(sb);
     }
 }
-#endif

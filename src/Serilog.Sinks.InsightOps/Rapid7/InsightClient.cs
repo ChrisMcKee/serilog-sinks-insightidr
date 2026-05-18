@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Serilog.Sinks.InsightIDR.Rapid7
 {
@@ -31,12 +31,12 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
 
         private readonly bool _useTls;
         public int TcpPort { get; }
-        private TcpClient _tcpClient;
-        private Stream _stream;
-        private SslStream _tlsStream;
-        public string ServerAddr { get; }
+        private TcpClient? _tcpClient;
+        private Stream? _stream;
+        private SslStream? _tlsStream;
+        public string ServerAddr { get; } = "";
 
-        private Stream ActiveStream => _useTls ? _tlsStream : _stream;
+        private Stream ActiveStream => _useTls ? _tlsStream! : _stream!;
 
         private static void SetSocketKeepAliveValues(TcpClient tcpClient, int keepAliveTime, int keepAliveInterval)
         {
@@ -58,35 +58,13 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveInterval, keepAliveInterval);
         }
 
-        public void Connect()
+        public void Connect(CancellationToken cancellationToken = default)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(30));
+
             _tcpClient = new TcpClient();
-            _tcpClient.Connect(ServerAddr, TcpPort);
-            _tcpClient.NoDelay = true;
-
-            _tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
-            try
-            {
-                SetSocketKeepAliveValues(_tcpClient, 10 * 1000, 1000);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // ignore
-            }
-
-            _stream = _tcpClient.GetStream();
-
-            if (!_useTls) return;
-
-            _tlsStream = new SslStream(_stream);
-            _tlsStream.AuthenticateAsClient(ServerAddr);
-        }
-
-        public async Task ConnectAsync()
-        {
-            _tcpClient = new TcpClient();
-            await _tcpClient.ConnectAsync(ServerAddr, TcpPort);
+            _tcpClient.ConnectAsync(ServerAddr, TcpPort, cts.Token).GetAwaiter().GetResult();
             _tcpClient.NoDelay = true;
 
             _tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
@@ -98,6 +76,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             catch (PlatformNotSupportedException)
             {
                 // .NET on Linux does not support modification of that setting at the moment. Defaults applied.
+                // ignore
             }
 
             _stream = _tcpClient.GetStream();
@@ -105,7 +84,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             if (!_useTls) return;
 
             _tlsStream = new SslStream(_stream);
-            await _tlsStream.AuthenticateAsClientAsync(ServerAddr);
+            _tlsStream.AuthenticateAsClientAsync(new System.Net.Security.SslClientAuthenticationOptions { TargetHost = ServerAddr }, cts.Token).GetAwaiter().GetResult();
         }
 
         public void Write(ReadOnlySpan<byte> buffer)
@@ -114,21 +93,15 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             ActiveStream.Flush();
         }
 
-        public async Task WriteAsync(byte[] buffer, int offset, int count)
-        {
-            await ActiveStream.WriteAsync(buffer.AsMemory(offset, count));
-            await ActiveStream.FlushAsync();
-        }
-
         public void Close()
         {
             if (_tcpClient == null) return;
 
             try
             {
-                _tcpClient?.Dispose();
-                _stream?.Dispose();
                 _tlsStream?.Dispose();
+                _stream?.Dispose();
+                _tcpClient.Dispose();
             }
             catch
             {

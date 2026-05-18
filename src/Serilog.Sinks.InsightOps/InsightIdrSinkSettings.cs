@@ -5,16 +5,15 @@ namespace Serilog.Sinks.InsightIDR
     public class InsightIdrSinkSettings : IAsyncLoggerConfig
     {
         /// <summary>
-        /// The unique token GUID of the log to send messages to. This applies when using the newer token-based logging.
+        /// The unique token GUID of the log to send messages to.
         /// </summary>
-        public string Token { get; set ; }
+        public required string Token { get; set; }
 
         /// <summary>
-        /// Supported Region's.
+        /// Region code: us, eu, ca, au, jp.
         /// </summary>
-        /// <remarks>List: us, eu, ca, au, jp</remarks>
         /// <see href="https://insightops.help.rapid7.com/docs/rest-api-overview#section-supported-regions"/>
-        public string Region { get; set; }
+        public required string Region { get; set; }
 
         /// <inheritdoc />
         public bool UseSsl { get; set; }
@@ -26,7 +25,7 @@ namespace Serilog.Sinks.InsightIDR
         public bool IsUsingDataHub { get; set; }
 
         /// <inheritdoc />
-        public string DataHubAddress { get; set; }
+        public string DataHubAddress { get; set; } = "";
 
         /// <inheritdoc />
         public int DataHubPort { get; set; }
@@ -35,9 +34,9 @@ namespace Serilog.Sinks.InsightIDR
         public bool LogHostname { get; set; }
 
         /// <inheritdoc />
-        public string HostName { get; set; }
+        public string HostName { get; set; } = "";
 
         /// <inheritdoc />
-        public string LogId { get; set; }
+        public string LogId { get; set; } = "";
     }
 }
