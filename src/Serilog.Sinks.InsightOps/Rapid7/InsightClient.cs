@@ -54,10 +54,8 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
                 return;
             }
 
-#if !NETSTANDARD2_0
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveTime, keepAliveTime);
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveInterval, keepAliveInterval);
-#endif
         }
 
         public void Connect()
@@ -99,7 +97,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             }
             catch (PlatformNotSupportedException)
             {
-                // .NET on Linux does not support modification of that settings at the moment. Defaults applied.
+                // .NET on Linux does not support modification of that setting at the moment. Defaults applied.
             }
 
             _stream = _tcpClient.GetStream();
@@ -110,26 +108,15 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             await _tlsStream.AuthenticateAsClientAsync(ServerAddr);
         }
 
-#if NETSTANDARD2_0
-        public void Write(byte[] buffer, int offset, int count)
-        {
-            ActiveStream.Write(buffer, offset, count);
-            ActiveStream.Flush();
-        }
-#else
         public void Write(ReadOnlySpan<byte> buffer)
         {
             ActiveStream.Write(buffer);
             ActiveStream.Flush();
         }
-#endif
+
         public async Task WriteAsync(byte[] buffer, int offset, int count)
         {
-            #if NETSTANDARD2_0
-            await ActiveStream.WriteAsync(buffer, offset, count);
-            #else
             await ActiveStream.WriteAsync(buffer.AsMemory(offset, count));
-            #endif
             await ActiveStream.FlushAsync();
         }
 

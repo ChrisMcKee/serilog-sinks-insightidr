@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
@@ -8,9 +9,10 @@ using Serilog.Formatting.Display;
 
 namespace Serilog.Sinks.InsightIDR
 {
+    [SuppressMessage("ReSharper", "ConvertToExtensionBlock")]
     public static class LoggerSinkConfigurationExtensions
     {
-        const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+        private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
 
         public static LoggerConfiguration InsightOps(
             this LoggerSinkConfiguration sinkConfiguration,
@@ -22,7 +24,7 @@ namespace Serilog.Sinks.InsightIDR
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch levelSwitch = null)
         {
-            if (!Enum.IsDefined(typeof(LogEventLevel), restrictedToMinimumLevel)) throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
+            if (!Enum.IsDefined(restrictedToMinimumLevel)) throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
             var formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
 
             var sink = new InsightIdrSink(settings, formatter);
