@@ -22,15 +22,8 @@ namespace Serilog.Sinks.InsightIDR
             this LoggerSinkConfiguration sinkConfiguration,
             InsightIdrSinkSettings settings,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch? levelSwitch = null)
-        {
-            if (!Enum.IsDefined(restrictedToMinimumLevel)) throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
-            var formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
-
-            var sink = new InsightIdrSink(settings, formatter);
-
-            return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
-        }
+            LoggingLevelSwitch? levelSwitch = null) =>
+            InsightIDR(sinkConfiguration, settings, formatter: null, restrictedToMinimumLevel, levelSwitch);
 
         // NOTE: If you provide an ITextFormatter, you should also provide an output template inside that instance.
         //       This is why this constructor doesn't offer an ITextFormatter AND an output template + IFormatProvider.
@@ -71,9 +64,10 @@ namespace Serilog.Sinks.InsightIDR
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             LoggingLevelSwitch? levelSwitch = null)
         {
-            var sink = new InsightIdrSink(settings, formatter);
+            if (!Enum.IsDefined(restrictedToMinimumLevel))
+                throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
 
-            return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
+            return sinkConfiguration.Sink(new InsightIdrSink(settings, formatter), restrictedToMinimumLevel, levelSwitch);
         }
 
         /// <summary>

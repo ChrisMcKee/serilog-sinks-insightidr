@@ -46,7 +46,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
         private const char NixNewLine = '\n';
 
         /** Unicode line separator character */
-        private const string LineSeparator = "\u2028";
+        internal const string LineSeparator = "\u2028";
 
         // Restricted symbols that should not appear in host name.
         // See http://support.microsoft.com/kb/228275/en-us for details.
@@ -249,7 +249,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             }
         }
 
-        private static void AppendWithNewlineReplacement(StringBuilder sb, string source)
+        internal static void AppendWithNewlineReplacement(StringBuilder sb, string source)
         {
             var span = source.AsSpan();
             int start = 0;
@@ -374,7 +374,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             return false;
         }
 
-        private static bool CheckIfHostNameValid(string hostName)
+        internal static bool CheckIfHostNameValid(string hostName)
         {
             return !_forbiddenHostNameChars.IsMatch(hostName); // Returns false if reg.ex. matches any of forbidden chars.
         }
