@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build version prefix/suffix
         run: |
@@ -23,7 +23,7 @@ jobs:
           echo "VERSION_SUFFIX=alpha" >> $GITHUB_ENV
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
 
       - run: dotnet restore --verbosity minimal
 
@@ -32,7 +32,7 @@ jobs:
       - run: dotnet pack --configuration Release --no-build --output ./artifacts -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
       - name: Publish artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NuGetPackage.${{ env.VERSION_PREFIX }}-${{ env.VERSION_SUFFIX }}.nupkg.zip
           path: ./artifacts/*

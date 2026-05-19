@@ -12,15 +12,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{84F17F94
 		.editorconfig = .editorconfig
 		global.json = global.json
 		README.md = README.md
+		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleWithConfigTest", "tests\ConsoleWithConfigTest\ConsoleWithConfigTest.csproj", "{7BC53E51-46AD-4BD5-AE1C-35C8E172E3BB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{58CE4CAF-70AA-4917-BF53-E4E0062115C2}"
 	ProjectSection(SolutionItems) = preProject
-		.github\CODE_OF_CONDUCT.md = .github\CODE_OF_CONDUCT.md
 		.github\CONTRIBUTING.md = .github\CONTRIBUTING.md
-		.github\FUNDING.yml = .github\FUNDING.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Workflows", "Workflows", "{5247B878-4E85-464F-AD85-A899D5A6569C}"
