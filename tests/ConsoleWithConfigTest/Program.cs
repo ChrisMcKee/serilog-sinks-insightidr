@@ -1,17 +1,18 @@
 using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 
-namespace Serilog.Sinks.InsightOps.ConsoleTest
+namespace ConsoleWithConfigTest
 {
     public class Program
     {
         static void Main()
         {
-            // If something is wrong with our Serilog setup, 
+            // If something is wrong with our Serilog setup,
             // lets make sure we can see what the problem is.
-            Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
-            Debugging.SelfLog.Enable(Console.Error);
+            Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
+            Serilog.Debugging.SelfLog.Enable(Console.Error);
 
             Console.WriteLine("Starting.");
 

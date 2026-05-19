@@ -1,57 +1,51 @@
 using System;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Formatting.Display;
 
-namespace Serilog.Sinks.InsightOps
+namespace Serilog.Sinks.InsightIDR
 {
+    [SuppressMessage("ReSharper", "ConvertToExtensionBlock")]
     public static class LoggerSinkConfigurationExtensions
     {
-        const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+        private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
 
-        public static LoggerConfiguration InsightOps(
+        public static LoggerConfiguration InsightIDR(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings) => InsightOps(sinkConfiguration, settings, LevelAlias.Minimum, null);
+            InsightIdrSinkSettings settings) => InsightIDR(sinkConfiguration, settings, LevelAlias.Minimum, null);
 
-        public static LoggerConfiguration InsightOps(
-            this LoggerSinkConfiguration sinkConfiguration, 
-            InsightOpsSinkSettings settings,
+        public static LoggerConfiguration InsightIDR(
+            this LoggerSinkConfiguration sinkConfiguration,
+            InsightIdrSinkSettings settings,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch levelSwitch = null)
-        {
-            var formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
-
-            var sink = new InsightOpsSink(settings, formatter);
-
-            return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
-        }
+            LoggingLevelSwitch? levelSwitch = null) =>
+            InsightIDR(sinkConfiguration, settings, formatter: null, restrictedToMinimumLevel, levelSwitch);
 
         // NOTE: If you provide an ITextFormatter, you should also provide an output template inside that instance.
         //       This is why this constructor doesn't offer an ITextFormatter AND an output template + IFormatProvider.
-        public static LoggerConfiguration InsightOps(
+        public static LoggerConfiguration InsightIDR(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings,
-            ITextFormatter formatter = null, 
+            InsightIdrSinkSettings settings,
+            ITextFormatter? formatter = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch levelSwitch = null)
+            LoggingLevelSwitch? levelSwitch = null)
         {
-            if (formatter == null)
-            {
-                formatter = new MessageTemplateTextFormatter(DefaultOutputTemplate);
-            }
+            formatter ??= new MessageTemplateTextFormatter(DefaultOutputTemplate);
 
             return sinkConfiguration.CreateSink(settings, formatter, restrictedToMinimumLevel, levelSwitch);
         }
 
-        public static LoggerConfiguration InsightOps(
+        public static LoggerConfiguration InsightIDR(
             this LoggerSinkConfiguration sinkConfiguration,
-            InsightOpsSinkSettings settings,
+            InsightIdrSinkSettings settings,
             string outputTemplate = DefaultOutputTemplate,
-            IFormatProvider formatProvider = null,
+            IFormatProvider? formatProvider = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch levelSwitch = null)
+            LoggingLevelSwitch? levelSwitch = null)
         {
             if (string.IsNullOrWhiteSpace(outputTemplate))
             {
@@ -64,15 +58,16 @@ namespace Serilog.Sinks.InsightOps
         }
 
         private static LoggerConfiguration CreateSink(
-            this LoggerSinkConfiguration sinkConfiguration, 
-            InsightOpsSinkSettings settings, 
+            this LoggerSinkConfiguration sinkConfiguration,
+            InsightIdrSinkSettings settings,
             ITextFormatter formatter,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch levelSwitch = null)
+            LoggingLevelSwitch? levelSwitch = null)
         {
-            var sink = new InsightOpsSink(settings, formatter);
+            if (!Enum.IsDefined(restrictedToMinimumLevel))
+                throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
 
-            return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
+            return sinkConfiguration.Sink(new InsightIdrSink(settings, formatter), restrictedToMinimumLevel, levelSwitch);
         }
 
         /// <summary>
@@ -81,7 +76,7 @@ namespace Serilog.Sinks.InsightOps
         /// <param name="sinkConfiguration">Logger sink configuration.</param>
         /// <param name="token">Secret token which links these logs to your logset/account.</param>
         /// <param name="region">Region to send data to. User: au, eu, us, ca, jp.</param>
-        /// <param name="useSsl">Use SSL or not. (SSl -might- have a slight performance hit, but don't quote me on that).</param>
+        /// <param name="useSsl">Use SSL or not.</param>
         /// <param name="debug">Sets the debug flag. Will print error messages to System.Diagnostics.Trace</param>
         /// <param name="isUsingDataHub">Set to true to use custom DataHub instance instead of Logentries service.</param>
         /// <param name="dataHubAddress">DataHub server address.</param>
@@ -90,42 +85,40 @@ namespace Serilog.Sinks.InsightOps
         /// <param name="logHostname">Set to true to send HostName alongside with the log message.</param>
         /// <param name="logId">Log ID.</param>
         /// <param name="restrictedToMinimumLevel">The minimum level for events passed through the sink. Ignored when levelSwitch is specified.</param>
-        /// <param name="formatter">The formatter to log events in a textual representation. E.G. a compact Json representation for structured logging.</param>
+        /// <param name="formatter">The formatter to log events in a textual representation.</param>
         /// <param name="levelSwitch">A switch allowing the pass-through minimum level to be changed at runtime.</param>
-        /// <returns></returns>
-        public static LoggerConfiguration InsightOps(
+        public static LoggerConfiguration InsightIDR(
             this LoggerSinkConfiguration sinkConfiguration,
             string token,
             string region,
             bool useSsl = true,
             bool debug = false,
             bool isUsingDataHub = false,
-            string dataHubAddress = null,
+            string? dataHubAddress = null,
             int dataHubPort = 0,
-            string hostName = null, 
+            string? hostName = null,
             bool logHostname = false,
-            string logId = null,
-            ITextFormatter formatter = null,
+            string? logId = null,
+            ITextFormatter? formatter = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch levelSwitch = null)
+            LoggingLevelSwitch? levelSwitch = null)
         {
-            var settings = new InsightOpsSinkSettings
+            var settings = new InsightIdrSinkSettings
             {
                 Token = token,
                 Region = region,
                 UseSsl = useSsl,
                 Debug = debug,
 
-                // Rarely used but still available to the developer.
                 IsUsingDataHub = isUsingDataHub,
-                DataHubAddress = dataHubAddress,
+                DataHubAddress = dataHubAddress ?? "",
                 DataHubPort = dataHubPort,
                 LogHostname = logHostname,
-                HostName = hostName,
-                LogID = logId
+                HostName = hostName ?? "",
+                LogId = logId ?? ""
             };
 
-            return InsightOps(sinkConfiguration, settings, formatter, restrictedToMinimumLevel, levelSwitch);
+            return InsightIDR(sinkConfiguration, settings, formatter, restrictedToMinimumLevel, levelSwitch);
         }
     }
 }

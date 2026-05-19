@@ -40,3 +40,5 @@ App_Data/
 *.nupkg
 *.vs
 *.vscode
+.idea
+/benchmarks/

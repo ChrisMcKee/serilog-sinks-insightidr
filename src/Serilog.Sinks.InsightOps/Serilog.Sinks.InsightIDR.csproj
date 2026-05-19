@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>Serilog.Sinks.InsightIdr</PackageId>
+    <Product>Serilog Sinks - Rapid7 IDR</Product>
+    <Authors>Chris McKee; Pure Krome (World Domination Technologies)</Authors>
+    <Copyright>2019-$([System.DateTime]::Now.Year)</Copyright>
+    <Description>A Serilog sink that writes log events to Rapid 7's InsightOps https://docs.rapid7.com/insightidr/insightidr-overview/</Description>
+    <PackageProjectUrl>https://github.com/chrismckee/serilog-sinks-insightidr</PackageProjectUrl>
+    <PackageTags>serilog logging rapid7 insightops</PackageTags>
+    <RepositoryUrl>https://github.com/chrismckee/serilog-sinks-insightidr</RepositoryUrl>
+    <RepositoryType>c#</RepositoryType>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageIconUrl />
+    
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+  
+</Project>
