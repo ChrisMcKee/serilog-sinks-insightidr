@@ -1,7 +1,5 @@
-using System.IO;
 using Serilog.Events;
 using Serilog.Formatting;
-using Serilog.Parsing;
 using Serilog.Sinks.InsightIDR;
 
 namespace UnitTests;

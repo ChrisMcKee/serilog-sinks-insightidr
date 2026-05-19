@@ -1,10 +1,6 @@
-using System;
-using System.IO;
-using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Serilog.Sinks.InsightIDR.Rapid7
 {

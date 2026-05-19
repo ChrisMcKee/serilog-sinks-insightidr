@@ -1,11 +1,7 @@
-using System;
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Serilog.Debugging;
 
 namespace Serilog.Sinks.InsightIDR.Rapid7
