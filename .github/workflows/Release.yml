@@ -13,6 +13,8 @@ permissions:
 
 env:
     DOTNET_NOLOGO: true
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
     build_and_create_a_nuget:
@@ -20,6 +22,11 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            -   name: 'Harden Runner'
+                uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+                with:
+                    egress-policy: audit
+
             -   name: Calculate version from the Commit Tag
                 run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
