@@ -6,6 +6,9 @@
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
     <LangVersion>latest</LangVersion>
+    <AssemblyOriginatorKeyFile>..\..\src\Serilog.Sinks.InsightIDR\insightidr.snk</AssemblyOriginatorKeyFile>
+    <PublicSign Condition="'$(OS)' != 'Windows_NT'">true</PublicSign>
+    <SignAssembly>true</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
