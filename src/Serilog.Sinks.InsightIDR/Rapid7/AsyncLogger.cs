@@ -162,6 +162,7 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
 
         private InsightTcpClient? _insightTcpClient;
         private volatile bool _isRunning;
+        private readonly object _startLock = new();
 
         private string _logMessagePrefix = string.Empty;
 
@@ -425,14 +426,25 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
                 if (_debugEnabled) WriteDebugMessagesFormat("Adding Line: {0}", line);
                 if (!_isRunning)
                 {
-                    // If in DataHub mode credentials are ignored.
-                    if (!_useDataHub && IsConfigured() || _useDataHub)
+                    // Emit() is called concurrently from multiple threads in a real host (unlike a
+                    // single-threaded console test), so the lazy start must be atomic: without this
+                    // lock, two racing threads can both see _isRunning == false and both call
+                    // Start() on the same Thread, throwing and silently killing logging (Serilog
+                    // swallows sink exceptions via SelfLog).
+                    lock (_startLock)
                     {
-                        if (_debugEnabled) WriteDebugMessages("Starting Rapid7 Insight asynchronous socket client.");
-                        _workerThread.Name = "Rapid7InsightOpsLogAppender";
-                        _workerThread.IsBackground = true;
-                        _workerThread.Start();
-                        _isRunning = true;
+                        if (!_isRunning)
+                        {
+                            // If in DataHub mode credentials are ignored.
+                            if (!_useDataHub && IsConfigured() || _useDataHub)
+                            {
+                                if (_debugEnabled) WriteDebugMessages("Starting Rapid7 Insight asynchronous socket client.");
+                                _workerThread.Name = "Rapid7InsightOpsLogAppender";
+                                _workerThread.IsBackground = true;
+                                _workerThread.Start();
+                                _isRunning = true;
+                            }
+                        }
                     }
                 }
 
