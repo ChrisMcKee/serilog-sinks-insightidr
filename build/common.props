@@ -1,0 +1,36 @@
+<Project>
+    <PropertyGroup>
+        <Product>Serilog Sinks - Rapid7 IDR</Product>
+        <Description>A Serilog sink that writes log events to Rapid 7's InsightOps https://docs.rapid7.com/insightidr/insightidr-overview/</Description>
+        <Authors>Chris McKee; Pure Krome (World Domination Technologies), Rapid7</Authors>
+        <Copyright>2019-$([System.DateTime]::Now.Year)</Copyright>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <PackageTags>serilog;logging;rapid7;insightops;idr</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIconUrl></PackageIconUrl>
+        <PackageIcon>logo.png</PackageIcon>
+        <PackageProjectUrl>https://github.com/ChrisMcKee/serilog-sinks-insightidr</PackageProjectUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/ChrisMcKee/serilog-sinks-insightidr</RepositoryUrl>
+        <PackageReleaseNotes>
+          https://github.com/ChrisMcKee/serilog-sinks-insightidr#readme
+        </PackageReleaseNotes>
+        <CLSCompliant>true</CLSCompliant>
+        <ComVisible>false</ComVisible>
+    </PropertyGroup>
+    <PropertyGroup>
+        <LangVersion>latest</LangVersion>
+        <Version Condition="'$(Version)' == '' and '$(VersionPrefix)' == ''">1.0.0-beta.5</Version>
+        <AssemblyVersionNumber>0.0.0</AssemblyVersionNumber>
+    </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyVersion>$(AssemblyVersionNumber)</AssemblyVersion>
+        <AssemblyFileVersion>$(AssemblyVersionNumber)</AssemblyFileVersion>
+        <InformationalVersion>$(Version)</InformationalVersion>
+        <PackageVersion>$(Version)</PackageVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+</Project>

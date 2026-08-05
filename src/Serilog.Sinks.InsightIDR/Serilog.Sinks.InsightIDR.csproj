@@ -12,10 +12,6 @@
     <PackageProjectUrl>https://github.com/chrismckee/serilog-sinks-insightidr</PackageProjectUrl>
     <PackageTags>serilog logging rapid7 insightops</PackageTags>
     <RepositoryUrl>https://github.com/chrismckee/serilog-sinks-insightidr</RepositoryUrl>
-    <RepositoryType>c#</RepositoryType>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageIconUrl />
   </PropertyGroup>
 
   <PropertyGroup>
@@ -25,18 +21,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="..\..\icon.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
+    <None Include="../../build/logo.png" Pack="true" Visible="false" PackagePath=""/>
+    <None Include="../../README.md" Pack="true" Visible="false" PackagePath=""/>
+    <None Include="../../LICENSE" Pack="true" Visible="false" PackagePath=""/>
   </ItemGroup>
-  
+
 </Project>
