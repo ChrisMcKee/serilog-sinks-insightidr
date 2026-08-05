@@ -10,7 +10,7 @@
         <PackageIconUrl></PackageIconUrl>
         <PackageIcon>logo.png</PackageIcon>
         <PackageProjectUrl>https://github.com/ChrisMcKee/serilog-sinks-insightidr</PackageProjectUrl>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
         <RepositoryUrl>https://github.com/ChrisMcKee/serilog-sinks-insightidr</RepositoryUrl>
         <PackageReleaseNotes>
