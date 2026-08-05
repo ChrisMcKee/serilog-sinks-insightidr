@@ -11,23 +11,12 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
 
         public static StringBuilder Acquire(int capacity = MaxBuilderSize)
         {
-            if (capacity <= MaxBuilderSize)
-            {
-                var sb = CachedInstance;
-                if (sb != null)
-                {
-                    // Avoid StringBuilder block fragmentation by getting a new StringBuilder
-                    // when the requested size is larger than the current capacity
-                    if (capacity <= sb.Capacity)
-                    {
-                        CachedInstance = null;
-                        sb.Clear();
-                        return sb;
-                    }
-                }
-            }
-
-            return new StringBuilder(capacity);
+            if (capacity > MaxBuilderSize) return new StringBuilder(capacity);
+            var sb = CachedInstance;
+            if (sb == null || capacity > sb.Capacity) return new StringBuilder(capacity);
+            CachedInstance = null;
+            sb.Clear();
+            return sb;
         }
 
         public static string GetStringAndRelease(StringBuilder sb)

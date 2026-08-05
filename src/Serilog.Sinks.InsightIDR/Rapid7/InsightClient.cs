@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Serilog.Sinks.InsightIDR.Rapid7
 {
-    internal sealed class InsightTcpClient
+    internal sealed class InsightTcpClient : IInsightConnection
     {
         private const string DataUrl = "{0}.data.logs.insight.rapid7.com";
         private const int UnsecurePort = 80;
@@ -54,42 +54,57 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveInterval, keepAliveInterval);
         }
 
-        public void Connect(CancellationToken cancellationToken = default)
+        public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
         {
+            if (_tcpClient != null) return;
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(30));
 
-            _tcpClient = new TcpClient();
-            _tcpClient.ConnectAsync(ServerAddr, TcpPort, cts.Token).GetAwaiter().GetResult();
-            _tcpClient.NoDelay = true;
-
-            _tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
+            var tcpClient = new TcpClient();
             try
             {
-                SetSocketKeepAliveValues(_tcpClient, 10 * 1000, 1000);
+                await tcpClient.ConnectAsync(ServerAddr, TcpPort, cts.Token).ConfigureAwait(false);
+                tcpClient.NoDelay = true;
+
+                tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+                try
+                {
+                    SetSocketKeepAliveValues(tcpClient, 10 * 1000, 1000);
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    // .NET on Linux does not support modification of that setting at the moment. Defaults applied.
+                    // ignore
+                }
+
+                var stream = tcpClient.GetStream();
+
+                if (_useTls)
+                {
+                    var tlsStream = new SslStream(stream);
+                    await tlsStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { TargetHost = ServerAddr }, cts.Token).ConfigureAwait(false);
+                    _tlsStream = tlsStream;
+                }
+
+                _stream = stream;
+                _tcpClient = tcpClient;
             }
-            catch (PlatformNotSupportedException)
+            catch
             {
-                // .NET on Linux does not support modification of that setting at the moment. Defaults applied.
-                // ignore
+                tcpClient.Dispose();
+                throw;
             }
-
-            _stream = _tcpClient.GetStream();
-
-            if (!_useTls) return;
-
-            _tlsStream = new SslStream(_stream);
-            _tlsStream.AuthenticateAsClientAsync(new System.Net.Security.SslClientAuthenticationOptions { TargetHost = ServerAddr }, cts.Token).GetAwaiter().GetResult();
         }
 
-        public void Write(ReadOnlySpan<byte> buffer)
+        public async Task WriteAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
         {
-            ActiveStream.Write(buffer);
-            ActiveStream.Flush();
+            await ActiveStream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
+            await ActiveStream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        public void Close()
+        public void Dispose()
         {
             if (_tcpClient == null) return;
 

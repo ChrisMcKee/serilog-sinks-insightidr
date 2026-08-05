@@ -1,8 +1,6 @@
-using Serilog.Sinks.InsightIDR.Rapid7;
-
 namespace Serilog.Sinks.InsightIDR
 {
-    public class InsightIdrSinkSettings : IAsyncLoggerConfig
+    public class InsightIdrSinkSettings
     {
         /// <summary>
         /// The unique token GUID of the log to send messages to.
@@ -15,28 +13,44 @@ namespace Serilog.Sinks.InsightIDR
         /// <see href="https://insightops.help.rapid7.com/docs/rest-api-overview#section-supported-regions"/>
         public required string Region { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Set to true to use SSL (Token-based or HTTP PUT Logging)
+        /// </summary>
         public bool UseSsl { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Sets the debug flag. Will print error messages to the Serilog SelfLog.
+        /// </summary>
         public bool Debug { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Set to true to use a custom DataHub instance instead of the Rapid7 InsightIDR service.
+        /// </summary>
         public bool IsUsingDataHub { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// DataHub server address.
+        /// </summary>
         public string DataHubAddress { get; set; } = "";
 
-        /// <inheritdoc />
+        /// <summary>
+        /// DataHub server port.
+        /// </summary>
         public int DataHubPort { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Set to true to send HostName alongside the log message.
+        /// </summary>
         public bool LogHostname { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// User-defined host name. If empty the library will try to obtain it automatically.
+        /// </summary>
         public string HostName { get; set; } = "";
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Log ID.
+        /// </summary>
         public string LogId { get; set; } = "";
     }
 }

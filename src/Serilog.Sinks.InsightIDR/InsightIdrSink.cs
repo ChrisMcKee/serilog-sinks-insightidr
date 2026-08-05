@@ -1,19 +1,32 @@
+using System.Buffers;
 using System.Text;
 using Serilog.Core;
-using Serilog.Debugging;
 using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Sinks.InsightIDR.Rapid7;
 
 namespace Serilog.Sinks.InsightIDR
 {
-    public class InsightIdrSink : ILogEventSink, IDisposable
+    /// <summary>
+    /// Formats and ships batches of log events to Rapid7 InsightIDR (or a DataHub instance) over
+    /// a persistent TCP/TLS connection. Batching, retry/backoff on transport failure, and shutdown
+    /// flushing are all handled by Serilog core's native batching sink (registered via
+    /// <c>LoggerSinkConfiguration.Sink(IBatchedLogEventSink, BatchingOptions, ...)</c>) — this class
+    /// only owns formatting and the connection.
+    /// </summary>
+    public sealed class InsightIdrSink : IBatchedLogEventSink, IAsyncDisposable
     {
         [ThreadStatic]
-        private static StringWriter? _cachedWriter;
+        private static StringWriter? CachedWriter;
 
-        private readonly AsyncLogger _asyncLogger;
+        private static readonly UTF8Encoding Utf8 = new(false, true);
+
         private readonly ITextFormatter _textFormatter;
+        private readonly bool _useDataHub;
+        private readonly string _tokenPrefix;
+        private readonly string _messagePrefix;
+        private readonly Func<IInsightConnection> _connectionFactory;
+        private IInsightConnection? _connection;
 
         /// <summary>
         /// The insightOps sink → a service which sends log messages to insightOps.
@@ -21,6 +34,11 @@ namespace Serilog.Sinks.InsightIDR
         /// <param name="config">insightOps settings.</param>
         /// <param name="textFormatter">Formats log events.</param>
         public InsightIdrSink(InsightIdrSinkSettings config, ITextFormatter textFormatter)
+            : this(config, textFormatter, connectionFactory: null)
+        {
+        }
+
+        internal InsightIdrSink(InsightIdrSinkSettings config, ITextFormatter textFormatter, Func<IInsightConnection>? connectionFactory)
         {
             if (config is null)
             {
@@ -30,73 +48,131 @@ namespace Serilog.Sinks.InsightIDR
             _textFormatter = textFormatter;
 
             ValidateToken(config.Token);
+            ValidateRegion(config.Region);
 
-            _asyncLogger = new AsyncLogger();
-            _asyncLogger.SetToken(config.Token);
-            _asyncLogger.SetRegion(config.Region);
-            _asyncLogger.SetUseSsl(config.UseSsl);
+            _useDataHub = config.IsUsingDataHub;
+            _tokenPrefix = _useDataHub ? string.Empty : config.Token;
+            _messagePrefix = BuildMessagePrefix(config);
 
-            // These options are more or less not used.
-            _asyncLogger.SetDebug(config.Debug);
-            _asyncLogger.SetUseHostName(config.LogHostname);
-            _asyncLogger.SetHostName(config.HostName);
-            _asyncLogger.SetLogId(config.LogId);
-
-            if (!config.IsUsingDataHub) return;
-
-            _asyncLogger.SetIsUsingDataHub(config.IsUsingDataHub);
-            _asyncLogger.SetDataHubAddr(config.DataHubAddress);
-            _asyncLogger.SetDataHubPort(config.DataHubPort);
+            _connectionFactory = connectionFactory
+                ?? (() => new InsightTcpClient(config.UseSsl, config.IsUsingDataHub, config.DataHubAddress, config.DataHubPort, config.Region));
         }
 
-        public void Emit(LogEvent logEvent)
+        private static string BuildMessagePrefix(InsightIdrSinkSettings config)
         {
-            if (logEvent == null)
-                throw new ArgumentNullException(nameof(logEvent));
+            var prefix = config.LogId != string.Empty ? config.LogId + " " : string.Empty;
+            if (!config.LogHostname) return prefix;
 
+            var hostName = config.HostName;
+            if (string.IsNullOrEmpty(hostName))
+            {
+                hostName = Environment.MachineName;
+            }
+            else if (!Rapid7LineFormatter.CheckIfHostNameValid(hostName))
+            {
+                // User-defined host name contains prohibited characters — send without it.
+                return prefix;
+            }
+
+            return prefix + "HostName=" + hostName + " ";
+        }
+
+        public Task EmitBatchAsync(IReadOnlyCollection<LogEvent> batch)
+        {
+            if (batch is null)
+            {
+                throw new ArgumentNullException(nameof(batch));
+            }
+
+            return EmitBatchCoreAsync(batch);
+        }
+
+        private async Task EmitBatchCoreAsync(IReadOnlyCollection<LogEvent> batch)
+        {
+            foreach (var logEvent in batch)
+            {
+                await WriteLogEventAsync(logEvent).ConfigureAwait(false);
+            }
+        }
+
+        // OnEmptyBatchAsync intentionally not overridden — Serilog.Core.IBatchedLogEventSink's default
+        // implementation (no-op) is exactly what we want.
+
+        private async Task WriteLogEventAsync(LogEvent logEvent)
+        {
             var writer = GetWriter();
             _textFormatter.Format(logEvent, writer);
-            _asyncLogger.QueueLogEvent(writer.GetStringBuilder().ToString());
+            var formatted = writer.GetStringBuilder().ToString();
+
+            foreach (var chunk in Rapid7LineFormatter.ChunkMessage(formatted))
+            {
+                await WriteLineAsync(chunk).ConfigureAwait(false);
+            }
+        }
+
+        private async Task WriteLineAsync(string chunk)
+        {
+            var logLine = StringBuilderCache.Acquire();
+            if (!_useDataHub) logLine.Append(_tokenPrefix);
+            if (_messagePrefix.Length > 0) logLine.Append(_messagePrefix);
+
+            Rapid7LineFormatter.AppendWithNewlineReplacement(logLine, chunk);
+            logLine.Append(Rapid7LineFormatter.NixNewLine);
+
+            var text = StringBuilderCache.GetStringAndRelease(logLine);
+            var byteCount = Utf8.GetByteCount(text);
+            var buffer = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                var written = Utf8.GetBytes(text, buffer);
+                await WriteWithReconnectAsync(buffer.AsMemory(0, written)).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        private async Task WriteWithReconnectAsync(ReadOnlyMemory<byte> payload)
+        {
+            _connection ??= _connectionFactory();
+
+            try
+            {
+                await _connection.EnsureConnectedAsync().ConfigureAwait(false);
+                await _connection.WriteAsync(payload).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Force a fresh connection on the next attempt. Let the batch's exception propagate so
+                // the batching infrastructure's own retry/backoff (FailureAwareBatchScheduler) handles
+                // timing instead of us reimplementing that here.
+                _connection.Dispose();
+                _connection = null;
+                throw;
+            }
         }
 
         private static StringWriter GetWriter()
         {
-            var writer = _cachedWriter;
+            var writer = CachedWriter;
             if (writer is null)
-                return _cachedWriter = new StringWriter(new StringBuilder(256));
+                return CachedWriter = new StringWriter(new StringBuilder(256));
             writer.GetStringBuilder().Clear();
             return writer;
         }
 
-        /// <summary>
-        /// Dispose should automatically be called by Serilog when it Flushes.
-        /// </summary>
-        /// <remarks>REF: https://github.com/serilog/serilog/wiki/Developing-a-sink#releasing-resources </remarks>
-        public void Dispose()
+        public ValueTask DisposeAsync()
         {
-            if (_asyncLogger is null)
-            {
-                return;
-            }
-
-            var flushed = _asyncLogger.FlushQueue(TimeSpan.FromSeconds(6));
-            if (!flushed)
-            {
-                SelfLog.WriteLine("InsightIDR: failed to flush queue within timeout");
-            }
-
-            _asyncLogger.InterruptWorker();
-
-            GC.SuppressFinalize(this);
+            _connection?.Dispose();
+            _connection = null;
+            return ValueTask.CompletedTask;
         }
 
         /// <summary>
-        /// The Token should be a GUID. The InsightOps AsyncLogger does a validation check but quietly
-        /// displays an error message to TRACE (which is crap). This can lead to the client NEVER
-        /// logging and makes it hard to track down (why this client failed to log).
-        /// So - let's be proactive and error this hard, fast, and early.
+        /// The Token should be a GUID. Validated eagerly (rather than deferred to the first failed
+        /// send) so misconfiguration fails fast and loudly instead of silently dropping every event.
         /// </summary>
-        /// <param name="token"></param>
         private static void ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -104,10 +180,18 @@ namespace Serilog.Sinks.InsightIDR
                 throw new Exception("The InsightOps Token (which is a Guid) is required. Otherwise, how else are logs going to be sent?");
             }
 
-            var isGuid = Guid.TryParse(token, out var _);
+            var isGuid = Guid.TryParse(token, out _);
             if (!isGuid)
             {
                 throw new Exception($"Provided Token '{token}' is not a valid Guid");
+            }
+        }
+
+        private static void ValidateRegion(string region)
+        {
+            if (string.IsNullOrWhiteSpace(region))
+            {
+                throw new Exception("A region (e.g. 'eu', 'us') is required.");
             }
         }
     }

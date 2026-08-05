@@ -21,8 +21,13 @@ namespace Serilog.Sinks.InsightIDR
             this LoggerSinkConfiguration sinkConfiguration,
             InsightIdrSinkSettings settings,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            LoggingLevelSwitch? levelSwitch = null) =>
-            InsightIDR(sinkConfiguration, settings, formatter: null, restrictedToMinimumLevel, levelSwitch);
+            LoggingLevelSwitch? levelSwitch = null)
+        {
+            if (!Enum.IsDefined(restrictedToMinimumLevel))
+                throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
+
+            return sinkConfiguration.InsightIDR(settings, formatter: null, restrictedToMinimumLevel, levelSwitch);
+        }
 
         // NOTE: If you provide an ITextFormatter, you should also provide an output template inside that instance.
         //       This is why this constructor doesn't offer an ITextFormatter AND an output template + IFormatProvider.
@@ -56,6 +61,16 @@ namespace Serilog.Sinks.InsightIDR
             return sinkConfiguration.CreateSink(settings, formatter, restrictedToMinimumLevel, levelSwitch);
         }
 
+        // Mirrors the old hand-rolled worker's queue capacity; batching/backoff/shutdown-flush are now
+        // handled by Serilog core's native batching sink rather than a bespoke BlockingCollection + thread.
+        private static readonly BatchingOptions DefaultBatchingOptions = new()
+        {
+            BatchSizeLimit = 100,
+            BufferingTimeLimit = TimeSpan.FromSeconds(2),
+            EagerlyEmitFirstEvent = true,
+            QueueLimit = 32768
+        };
+
         private static LoggerConfiguration CreateSink(
             this LoggerSinkConfiguration sinkConfiguration,
             InsightIdrSinkSettings settings,
@@ -66,7 +81,9 @@ namespace Serilog.Sinks.InsightIDR
             if (!Enum.IsDefined(restrictedToMinimumLevel))
                 throw new InvalidEnumArgumentException(nameof(restrictedToMinimumLevel), (int)restrictedToMinimumLevel, typeof(LogEventLevel));
 
-            return sinkConfiguration.Sink(new InsightIdrSink(settings, formatter), restrictedToMinimumLevel, levelSwitch);
+            var batchedSink = new InsightIdrSink(settings, formatter);
+
+            return sinkConfiguration.Sink(batchedSink, DefaultBatchingOptions, restrictedToMinimumLevel, levelSwitch);
         }
 
         /// <summary>
