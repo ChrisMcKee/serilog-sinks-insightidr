@@ -78,6 +78,14 @@ namespace Serilog.Sinks.InsightIDR.Rapid7
                     // .NET on Linux does not support modification of that setting at the moment. Defaults applied.
                     // ignore
                 }
+                catch (SocketException ex) when (
+                    ex.SocketErrorCode == SocketError.OperationNotSupported ||
+                    ex.SocketErrorCode == SocketError.ProtocolOption ||
+                    ex.SocketErrorCode == SocketError.InvalidArgument)
+                {
+                    // Some Linux environments reject keep-alive tuning even when KeepAlive itself is enabled.
+                    // Keep the connection and let OS defaults apply.
+                }
 
                 var stream = tcpClient.GetStream();
 
